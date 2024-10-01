@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom T-Shirt Designer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #e9ecef;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+        .main-container {
+            display: flex;
+            align-items: flex-start;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .tshirt-container {
+            position: relative;
+            width: 300px;
+            height: 400px;
+            background-color: #fff;
+            background-image: url('OIP.jpeg'); /* T-shirt template image */
+            background-size: cover;
+            background-position: center;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+        }
+        .resizable {
+            position: absolute;
+            top: 150px;
+            left: 50px;
+            width: 100px;
+            height: auto;
+            cursor: grab;
+            display: none; /* Hidden until image is uploaded */
+        }
+        .resizable img {
+            width: 100%;
+            height: 100%;
+        }
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #000;
+            cursor: nwse-resize;
+        }
+        .resize-handle.br {
+            right: -5px;
+            bottom: -5px;
+        }
+        .text-container {
+            position: absolute;
+            top: 100px;
+            left: 50px;
+            cursor: move;
+            font-size: 20px;
+            color: black;
+            font-weight: bold;
+            display: none;
+        }
+        .controls-container {
+            margin-left: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .controls-container div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        input[type="file"],
+        input[type="text"],
+        input[type="range"],
+        input[type="color"],
+        select {
+            padding: 10px;
+            font-size: 14px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            outline: none;
+        }
+        input[type="file"] {
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+        }
+        input[type="file"]::-webkit-file-upload-button {
+            cursor: pointer;
+        }
+        input[type="range"] {
+            width: 150px;
+        }
+        label {
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="position:absolute;margin-top:-600px;">Customize Your T-Shirt</h1>
+    <div class="main-container">
+        <div class="tshirt-container" id="tshirt-container">
+            <!-- Wrapping the uploaded image inside a resizable div -->
+            <div class="resizable" id="resizable-image">
+                <img id="user-image" src="" alt="User Image">
+                <div class="resize-handle br"></div>
+            </div>
+            <!-- Custom Text container -->
+            <div class="text-container" id="text-container">Your Text Here</div>
+        </div>
+
+        <div class="controls-container">
+            <!-- Image Upload -->
+            <div>
+                <label for="image-upload">Upload Image:</label>
+                <input type="file" id="image-upload" accept="image/*">
+            </div>
+
+            <!-- Custom Text Input -->
+            <div>
+                <label for="custom-text">Custom Text:</label>
+                <input type="text" id="custom-text" placeholder="Enter custom text">
+            </div>
+
+            <!-- Text Size Control -->
+            <div>
+                <label for="text-size">Text Size:</label>
+                <input type="range" id="text-size" min="10" max="50" value="20">
+            </div>
+
+            <!-- Text Color Picker -->
+            <div>
+                <label for="text-color">Text Color:</label>
+                <input type="color" id="text-color" value="#000000">
+            </div>
+
+            <!-- Font Style Selector -->
+            <div>
+                <label for="font-style">Font Style:</label>
+                <select id="font-style">
+                    <option value="Arial">Arial</option>
+                    <option value="Courier New">Courier New</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                    <option value="Verdana">Verdana</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const imageUpload = document.getElementById('image-upload');
+        const userImage = document.getElementById('user-image');
+        const resizableImage = document.getElementById('resizable-image');
+        const tshirtContainer = document.getElementById('tshirt-container');
+        const resizeHandleBR = document.querySelector('.resize-handle.br');
+        const customTextInput = document.getElementById('custom-text');
+        const textContainer = document.getElementById('text-container');
+        const textSizeInput = document.getElementById('text-size');
+        const textColorInput = document.getElementById('text-color');
+        const fontStyleInput = document.getElementById('font-style');
+
+        let offsetX, offsetY, isResizing = false;
+
+        // Handle image upload and display on T-shirt
+        imageUpload.addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    userImage.src = e.target.result;
+                    resizableImage.style.display = 'block';  // Show the image with resizable container
+                }
+                reader.readAsDataURL(file);  // Convert image file to base64 URL
+            }
+        });
+
+        // Add drag and drop functionality for the image container
+        resizableImage.addEventListener('mousedown', function(e) {
+            if (!isResizing) {
+                offsetX = e.clientX - resizableImage.getBoundingClientRect().left;
+                offsetY = e.clientY - resizableImage.getBoundingClientRect().top;
+
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('mouseup', stopDrag);
+            }
+        });
+
+        // Drag the image container with boundary checks
+        function drag(e) {
+            const containerRect = tshirtContainer.getBoundingClientRect();
+            const newLeft = e.clientX - offsetX - containerRect.left;
+            const newTop = e.clientY - offsetY - containerRect.top;
+
+            // Boundary checks
+            if (newLeft < 0) {
+                resizableImage.style.left = '0px';
+            } else if (newLeft + resizableImage.offsetWidth > containerRect.width) {
+                resizableImage.style.left = `${containerRect.width - resizableImage.offsetWidth}px`;
+            } else {
+                resizableImage.style.left = `${newLeft}px`;
+            }
+
+            if (newTop < 0) {
+                resizableImage.style.top = '0px';
+            } else if (newTop + resizableImage.offsetHeight > containerRect.height) {
+                resizableImage.style.top = `${containerRect.height - resizableImage.offsetHeight}px`;
+            } else {
+                resizableImage.style.top = `${newTop}px`;
+            }
+        }
+
+        // Stop dragging
+        function stopDrag() {
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+
+        // Handle resizing the image from the bottom-right corner
+        resizeHandleBR.addEventListener('mousedown', function(e) {
+            isResizing = true;
+
+            document.addEventListener('mousemove', resize);
+            document.addEventListener('mouseup', stopResize);
+        });
+
+        function resize(e) {
+            const newWidth = e.clientX - resizableImage.getBoundingClientRect().left;
+            const newHeight = e.clientY - resizableImage.getBoundingClientRect().top;
+
+            resizableImage.style.width = `${newWidth}px`;
+            resizableImage.style.height = `${newHeight}px`;  // Adjust height proportionally if needed
+        }
+
+        // Stop resizing
+        function stopResize() {
+            isResizing = false;
+            document.removeEventListener('mousemove', resize);
+            document.removeEventListener('mouseup', stopResize);
+        }
+
+        // Handle custom text input
+        customTextInput.addEventListener('input', function() {
+            textContainer.textContent = customTextInput.value;
+            textContainer.style.display = 'block';  // Show the text container
+        });
+
+        // Allow dragging the text with boundary checks
+        textContainer.addEventListener('mousedown', function(e) {
+            offsetX = e.clientX - textContainer.getBoundingClientRect().left;
+            offsetY = e.clientY - textContainer.getBoundingClientRect().top;
+
+            document.addEventListener('mousemove', dragText);
+            document.addEventListener('mouseup', stopDragText);
+        });
+
+        function dragText(e) {
+            const containerRect = tshirtContainer.getBoundingClientRect();
+            const newLeft = e.clientX - offsetX - containerRect.left;
+            const newTop = e.clientY - offsetY - containerRect.top;
+
+            // Boundary checks for text dragging
+            if (newLeft < 0) {
+                textContainer.style.left = '0px';
+            } else if (newLeft + textContainer.offsetWidth > containerRect.width) {
+                textContainer.style.left = `${containerRect.width - textContainer.offsetWidth}px`;
+            } else {
+                textContainer.style.left = `${newLeft}px`;
+            }
+
+            if (newTop < 0) {
+                textContainer.style.top = '0px';
+            } else if (newTop + textContainer.offsetHeight > containerRect.height) {
+                textContainer.style.top = `${containerRect.height - textContainer.offsetHeight}px`;
+            } else {
+                textContainer.style.top = `${newTop}px`;
+            }
+        }
+
+        function stopDragText() {
+            document.removeEventListener('mousemove', dragText);
+            document.removeEventListener('mouseup', stopDragText);
+        }
+
+        // Handle text size change
+        textSizeInput.addEventListener('input', function() {
+            textContainer.style.fontSize = `${textSizeInput.value}px`;
+        });
+
+        // Handle text color change
+        textColorInput.addEventListener('input', function() {
+            textContainer.style.color = textColorInput.value;
+        });
+
+        // Handle font style change
+        fontStyleInput.addEventListener('change', function() {
+            textContainer.style.fontFamily = fontStyleInput.value;
+        });
+    </script>
+</body>
+</html>
